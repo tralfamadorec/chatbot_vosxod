@@ -1,4 +1,5 @@
 from .errors import EmptyArrayError, InvalidInputError
+from .messages import Messages
 import random
 
 # чистая логика
@@ -6,7 +7,7 @@ import random
 def count_subarrays_with_sum(arr, target):
     # считает количество подмассивов с заданной суммой
     if not arr:
-        raise EmptyArrayError("Массив не должен быть пустым")
+        raise EmptyArrayError(Messages.TASK5_EMPTY_ARRAY)
     count = 0
     n = len(arr)
     for i in range(n):
@@ -38,15 +39,15 @@ class Task5FSM:
         elif self.state == "show_result":
             return self._handle_show_result()
         else:
-            return "Неизвестное состояние"
+            return Messages.UNKNOWN_STATE
 
     def _handle_menu(self, text):
         if text == "Ввести вручную":
             self.state = "input_manual"
-            return "Введите массив и цель через ';' (например: 1 2 3; 5)"
+            return Messages.INPUT_MANUAL_TASK5
         elif text == "Сгенерировать":
             self.state = "input_random"
-            return "Введите размер массива (целое число > 0):"
+            return Messages.INPUT_RANDOM_SIZE
         elif text == "Выполнить":
             self.state = "execute"
             return self._handle_execute()
@@ -56,60 +57,60 @@ class Task5FSM:
         elif text == "Назад":
             return "exit"
         else:
-            return "Пожалуйста, используйте кнопки."
+            return Messages.PLEASE_USE_BUTTONS
 
     def _handle_input_manual(self, text):
         try:
             parts = text.split(";")
             if len(parts) != 2:
-                return "Неверный формат. Отправьте: 'массив; цель'"
+                return Messages.INVALID_FORMAT
             arr = list(map(int, parts[0].split()))
             target = int(parts[1])
             if not arr:
-                raise EmptyArrayError("Массив пуст")
+                raise EmptyArrayError(Messages.TASK5_EMPTY_ARRAY)
             self.context["arr"] = arr
             self.context["target"] = target
             self.context["result"] = None
             self.state = "menu"
-            return "Данные сохранены."
+            return Messages.DATA_SAVED
         except Exception as e:
             self.state = "menu"
-            return f"Ошибка: {e}"
+            return f"{Messages.INVALID_INPUT}: {e}"
 
     def _handle_input_random(self, text):
         try:
             n = int(text)
             if n <= 0:
-                raise InvalidInputError("Размер должен быть > 0")
+                raise InvalidInputError(Messages.INVALID_INPUT_SIZE)
             self.context["arr"] = [random.randint(-10, 10) for _ in range(n)]
             self.context["target"] = random.randint(-5, 10)
             self.context["result"] = None
             self.state = "menu"
-            return f"Сгенерировано.\nМассив: {self.context['arr']}\nЦель: {self.context['target']}"
+            return f"{Messages.GENERATED_SUCCESS}\nМассив: {self.context['arr']}\nЦель: {self.context['target']}"
         except Exception as e:
             self.state = "menu"
-            return f"Ошибка: {e}"
+            return f"{Messages.INVALID_INPUT}: {e}"
 
     def _handle_execute(self):
         if self.context["arr"] is None or self.context["target"] is None:
             self.state = "menu"
-            return "Сначала введите данные!"
+            return Messages.NO_DATA
         try:
             self.context["result"] = count_subarrays_with_sum(self.context["arr"], self.context["target"])
             self.state = "menu"
-            return "Алгоритм выполнен. Результат сохранён."
+            return Messages.ALGORITHM_DONE
         except Exception as e:
             self.state = "menu"
-            return f"Ошибка: {e}"
+            return f"{Messages.INVALID_INPUT}: {e}"
 
     def _handle_show_result(self):
         if self.context["result"] is None:
             self.state = "menu"
-            return "Сначала выполните алгоритм!"
+            return Messages.NOT_EXECUTED
         result = self.context["result"]
         target = self.context["target"]
         self.state = "menu"
-        return f"Количество подмассивов с суммой {target}: {result}"
+        return f"{Messages.TASK5_RESULT_PREFIX}{target}: {result}"
 
 
 if __name__ == "__main__":
