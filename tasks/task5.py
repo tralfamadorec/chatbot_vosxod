@@ -1,16 +1,29 @@
 """Модуль для выполнения задания 5: подмассивы с заданной суммой
 
-Реализует алгоритм подсчёта количества непрерывных подмассивов, сумма элементов которых равна заданному числу
+Реализует алгоритм с использованием функционального программирования:
+- Чистая функция без побочных эффектов
+- Генератор всех подмассивов (ленивые вычисления)
+- Использование встроенных функций высшего порядка: sum, generator expression
+- Отсутствие императивных циклов
+- Неизменяемость данных
+
+Алгоритм:
+Подсчитывает количество непрерывных подмассивов, сумма элементов которых равна заданному числу
 """
 
-from .errors import EmptyArrayError, InvalidInputError
+from .errors import EmptyArrayError
 from .messages import Messages
-import random
 
-# чистая логика
+# функциональное ядро (чистая функция)
 
 def count_subarrays_with_sum(arr, target):
-    """Считает количество непрерывных подмассивов с заданной суммой
+    """Подсчитывает количество подмассивов с заданной суммой (ФП-стиль)
+
+    Использует генераторное выражение для ленивого перебора всех подмассивов
+    Не мутирует входной массив
+
+    Пример логики как пайплайна:
+        arr -> все подмассивы -> фильтрация по сумме -> подсчёт
 
     Args:
         arr (list[int]): Исходный массив целых чисел
@@ -24,18 +37,19 @@ def count_subarrays_with_sum(arr, target):
     """
     if not arr:
         raise EmptyArrayError(Messages.TASK5_EMPTY_ARRAY)
-    count = 0
+
     n = len(arr)
-    for i in range(n):
-        current_sum = 0
-        for j in range(i, n):
-            current_sum += arr[j]
-            if current_sum == target:
-                count += 1
-    return count
+    # генератор всех непрерывных подмассивов: arr[i:j] для 0 <= i < j <= n
+    subarrays = (arr[i:j] for i in range(n) for j in range(i + 1, n + 1))
+    # декларативный подсчёт: сколько подмассивов имеют сумму == target
+    return sum(1 for sub in subarrays if sum(sub) == target)
 
 
 # FSM через словарь состояний (адаптирован под Telegram)
+
+from .errors import InvalidInputError
+from .messages import Messages
+import random
 
 class Task5FSM:
     """Конечный автомат для задания 5
@@ -185,6 +199,7 @@ class Task5FSM:
         return f"{Messages.TASK5_RESULT_PREFIX}{target}: {result}"
 
 
+# тестирование чистой логики
 if __name__ == "__main__":
     print("Тест task5:")
     try:

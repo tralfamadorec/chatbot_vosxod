@@ -1,77 +1,84 @@
 """Модуль для выполнения задания 1: обработка двух массивов
 
-Реализует алгоритм:
+Реализует алгоритм с использованием функционального программирования:
+- Чистые функции без побочных эффектов
+- Использование функций высшего порядка (zip_with, compose)
+- Отсутствие императивных циклов
+- Неизменяемость данных
+
+Алгоритм:
 1. Первый массив сортируется по убыванию
-2. Второй - по возрастанию
-3. Элементы складываются; если совпадают - обнуляются
+2. Второй — по возрастанию
+3. Элементы складываются; если совпадают — обнуляются
 4. Результат сортируется по возрастанию
 """
 
 from .errors import ArraysLengthMismatchError, InvalidInputError
 from .messages import Messages
+from .functional_utils import zip_with, compose
 import random
 
-# чистая логика
+
+# функциональное ядро (чистые функции)
 
 def sort_desc(arr):
-    """Сортирует массив по убыванию
-
-    Args:
-        arr (list[int]): Исходный массив целых чисел
-
-    Returns:
-        list[int]: Новый массив, отсортированный по убыванию
-    """
+    # сортирует массив по убыванию (чистая функция)
     return sorted(arr, reverse=True)
 
 
 def sort_asc(arr):
-    """Сортирует массив по возрастанию
-
-    Args:
-        arr (list[int]): Исходный массив целых чисел
-
-    Returns:
-        list[int]: Новый массив, отсортированный по возрастанию
-    """
+    # сортирует массив по возрастанию (чистая функция)
     return sorted(arr)
 
 
-def sum_arrays_with_zero(a, b):
-    """Выполняет поэлементную сумму двух массивов с обнулением совпадений
+def sum_with_zero_if_equal(x, y):
+    # вспомогательная функция для zip_with: сумма с обнулением при равенстве
+    return 0 if x == y else x + y
 
-    Если элементы на одинаковых позициях равны, результат - 0
-    Иначе - сумма элементов
+
+def sum_arrays_with_zero(a, b):
+    """Выполняет поэлементную сумму с обнулением совпадений (ФП-стиль)
+
+    Использует zip_with - функцию высшего порядка
+    Не мутирует входные массивы
 
     Args:
         a (list[int]): Первый массив
         b (list[int]): Второй массив (той же длины)
 
     Returns:
-        list[int]: Результирующий массив
+        list[int]: Новый массив — результат обработки
     """
-    return [0 if x == y else x + y for x, y in zip(a, b)]
+    return zip_with(sum_with_zero_if_equal, a, b)
 
 
 def solve(arr1, arr2):
-    """Выполняет полный алгоритм задания 1
+    """Выполняет полный алгоритм задания 1 в функциональном стиле
+
+    Использует композицию функций для читаемости потока данных
+    Все функции — чистые, без побочных эффектов
 
     Args:
         arr1 (list[int]): Первый массив
         arr2 (list[int]): Второй массив (той же длины)
 
     Returns:
-        list[int]: Отсортированный по возрастанию результат обработки
+        list[int]: Отсортированный по возрастанию результат
 
     Raises:
-        ArraysLengthMismatchError: Если длины массивов не совпадают
+        ArraysLengthMismatch0Error: Если длины массивов не совпадают
     """
     if len(arr1) != len(arr2):
         raise ArraysLengthMismatchError(Messages.TASK1_ARRAYS_LEN_MISMATCH)
-    a_sorted = sort_desc(arr1)
-    b_sorted = sort_asc(arr2)
-    summed = sum_arrays_with_zero(a_sorted, b_sorted)
-    return sort_asc(summed)
+
+    # композиция: сначала обработка, потом сортировка результата
+    pipeline = compose(sort_asc, sum_arrays_with_zero, sort_desc, sort_asc)
+    # но из-за двух аргументов в sum_arrays_with_zero - делаем по шагам:
+    a_desc = sort_desc(arr1)  # шаг 1
+    b_asc = sort_asc(arr2)  # шаг 2
+    summed = sum_arrays_with_zero(a_desc, b_asc)  # шаг 3
+    result = sort_asc(summed)  # шаг 4
+    return result
 
 
 # FSM через словарь состояний (адаптирован под Telegram)
@@ -222,7 +229,7 @@ class Task1FSM:
         self.state = "menu"
         return f"{Messages.TASK1_RESULT}{result}"
 
-
+# тестирование чистой логики
 if __name__ == "__main__":
     print("Тест task1: solve")
     try:
