@@ -18,8 +18,9 @@
 import telebot
 import logging
 import sys
+import time
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton
-from telebot.apihelper import ApiTelegramException  # ← для обработки 403
+from telebot.apihelper import ApiTelegramException
 from tasks.task1 import Task1FSM
 from tasks.task5 import Task5FSM
 from tasks.task8 import Task8FSM
@@ -27,45 +28,16 @@ from tasks.messages import Messages
 from config import TOKEN
 
 
-# кастомный форматтер для логов
-class CustomFormatter(logging.Formatter):
-    def format(self, record):
-        time_str = self.formatTime(record, "%Y-%m-%d %H:%M:%S")
-
-        # старт/остановка бота
-        if record.msg in ["ЗАПУСК TELEGRAM-БОТА", "Бот остановлен пользователем"]:
-            return f"{time_str} - {record.msg}"
-
-        # сообщения об ошибках - полный формат
-        if record.levelno >= logging.ERROR:
-            return f"{time_str} - {record.name} - {record.levelname} - {record.getMessage()}"
-
-        # сообщения от пользователей (через extra)
-        if hasattr(record, 'user_id') and hasattr(record, 'username') and hasattr(record, 'action'):
-            return f"{time_str} - {record.user_id} (@{record.username}) - {record.action}"
-
-        # остальные сообщения
-        return f"{time_str} - {record.getMessage()}"
-
-
-# настройка логгера
-formatter = CustomFormatter()
-
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setFormatter(formatter)
-
-file_handler = logging.FileHandler("bot.log", encoding="utf-8")
-file_handler.setFormatter(formatter)
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.addHandler(console_handler)
-logger.addHandler(file_handler)
+# безопасная отправка "печатает..."
+def safe_send_chat_action(user_id, action="typing"):
+    try:
+        bot.send_chat_action(user_id, action)
+    except ApiTelegramException:
+        pass  # игнорировать 403
 
 
 # безопасная отправка сообщений
 def safe_send_message(user_id, text, reply_markup=None):
-    # отправляет сообщение, игнорируя ошибку 403 (пользователь заблокировал бота)
     try:
         bot.send_message(user_id, text, reply_markup=reply_markup)
     except ApiTelegramException as e:
@@ -75,19 +47,36 @@ def safe_send_message(user_id, text, reply_markup=None):
             logger.error(f"Ошибка отправки сообщения пользователю {user_id}: {e}", exc_info=True)
 
 
-# инициализация Telegram-бота
-bot = telebot.TeleBot(TOKEN)
+# кастомный форматтер для логов
+class CustomFormatter(logging.Formatter):
+    def format(self, record):
+        time_str = self.formatTime(record, "%Y-%m-%d %H:%M:%S")
+        if record.msg in ["ЗАПУСК TELEGRAM-БОТА", "Бот остановлен пользователем"]:
+            return f"{time_str} - {record.msg}"
+        if record.levelno >= logging.ERROR:
+            return f"{time_str} - {record.name} - {record.levelname} - {record.getMessage()}"
+        if hasattr(record, 'user_id') and hasattr(record, 'username') and hasattr(record, 'action'):
+            return f"{time_str} - {record.user_id} (@{record.username}) - {record.action}"
+        return f"{time_str} - {record.getMessage()}"
 
-# хранилище сессий пользователей: user_id -> {"state": str, "fsm": FSM}
+
+# настройка логгера
+formatter = CustomFormatter()
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(formatter)
+file_handler = logging.File Handler("bot.log", encoding="utf-8")
+file_handler.setFormatter(formatter)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+
+
+bot = telebot.TeleBot(TOKEN)
 sessions = {}
 
 
 def get_main_keyboard():
-    """Создаёт клавиатуру главного меню
-
-    Returns:
-        ReplyKeyboardMarkup: Клавиатура с выбором заданий
-    """
     kb = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
     kb.row("Задание 1", "Задание 5", "Задание 8")
     kb.row("Все задания")
@@ -95,11 +84,6 @@ def get_main_keyboard():
 
 
 def get_task1_actions():
-    """Создаёт клавиатуру действий для задания 1
-
-    Returns:
-        ReplyKeyboardMarkup: Клавиатура с действиями задания 1
-    """
     kb = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
     kb.row("Ввести вручную", "Сгенерировать")
     kb.row("Выполнить", "Результат")
@@ -108,11 +92,6 @@ def get_task1_actions():
 
 
 def get_task5_actions():
-    """Создаёт клавиатуру действий для задания 5
-
-    Returns:
-        ReplyKeyboardMarkup: Клавиатура с действиями задания 5
-    """
     kb = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
     kb.row("Ввести вручную", "Сгенерировать")
     kb.row("Выполнить", "Результат")
@@ -121,11 +100,6 @@ def get_task5_actions():
 
 
 def get_task8_actions():
-    """Создаёт клавиатуру действий для задания 8
-
-    Returns:
-        ReplyKeyboardMarkup: Клавиатура с действиями задания 8
-    """
     kb = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
     kb.row("Ввести вручную", "Сгенерировать")
     kb.row("Выполнить", "Результат")
@@ -135,13 +109,6 @@ def get_task8_actions():
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    """Обрабатывает команду /start
-
-    Инициализирует сессию пользователя и отправляет приветственное сообщение с клавиатурой главного меню
-
-    Args:
-        message (telebot.types.Message): Входящее сообщение от пользователя
-    """
     user_id = message.from_user.id
     username = message.from_user.username or "unknown"
     logger.info("", extra={
@@ -153,20 +120,31 @@ def start(message):
     safe_send_message(user_id, Messages.GREETING, reply_markup=get_main_keyboard())
 
 
+@bot.message_handler(commands=['help'])
+def help_command(message):
+    # отправляет справку по командам
+    user_id = message.from_user.id
+    help_text = (
+        "Справка по боту\n\n"
+        "Доступные команды:\n"
+        "/start — перезапуск бота\n"
+        "/help — эта справка\n\n"
+        "Как пользоваться:\n"
+        "1. Выберите задание\n"
+        "2. Нажмите «Ввести вручную» или «Сгенерировать»\n"
+        "3. Выполните алгоритм\n"
+        "4. Посмотрите результат\n\n"
+        "! Используйте кнопки - они упрощают работу!"
+    )
+    safe_send_message(user_id, help_text, reply_markup=None)
+
+
 @bot.message_handler(func=lambda m: True)
 def handle_message(message):
-    """Обрабатывает все текстовые сообщения от пользователя
-
-    Управляет навигацией между заданиями и передаёт управление соответствующему FSM для обработки действий
-
-    Args:
-        message (telebot.types.Message): Входящее текстовое сообщение
-    """
     user_id = message.from_user.id
     username = message.from_user.username or "unknown"
     text = message.text.strip()
 
-    # инициализация сессии для новых пользователей
     if user_id not in sessions:
         logger.info("", extra={
             'user_id': user_id,
@@ -179,7 +157,6 @@ def handle_message(message):
 
     session = sessions[user_id]
 
-    # обработка главного меню
     if session["state"] == "main_menu":
         if text == "Задание 1":
             logger.info("", extra={
@@ -231,7 +208,6 @@ def handle_message(message):
             })
             safe_send_message(user_id, Messages.INVALID_MAIN_CHOICE, reply_markup=get_main_keyboard())
 
-    # обработка внутри задания
     else:
         fsm = session["fsm"]
         try:
@@ -246,23 +222,26 @@ def handle_message(message):
                 sessions[user_id] = {"state": "main_menu", "fsm": None}
                 safe_send_message(user_id, Messages.BACK_TO_MAIN, reply_markup=get_main_keyboard())
             else:
-                # отправка ответа от FSM
+                # анимация "печатает..." для действий, требующих обработки
+                if "Сгенерировано" in response or "Результат:" in response or "выполнен" in response.lower():
+                    safe_send_chat_action(user_id, "typing")
+                    time.sleep(0.4)
+
                 safe_send_message(user_id, response)
 
-                # показ клавиатуры действий только если FSM вернулся в меню
                 current_state = fsm.state
                 if current_state == "menu":
+                    prompt_msg = Messages.NEXT_ACTION_PROMPT
                     if session["state"] == "task1":
-                        safe_send_message(user_id, Messages.NEXT_ACTION_PROMPT, reply_markup=get_task1_actions())
+                        safe_send_message(user_id, prompt_msg, reply_markup=get_task1_actions())
                     elif session["state"] == "task5":
-                        safe_send_message(user_id, Messages.NEXT_ACTION_PROMPT, reply_markup=get_task5_actions())
+                        safe_send_message(user_id, prompt_msg, reply_markup=get_task5_actions())
                     elif session["state"] == "task8":
-                        safe_send_message(user_id, Messages.NEXT_ACTION_PROMPT, reply_markup=get_task8_actions())
+                        safe_send_message(user_id, prompt_msg, reply_markup=get_task8_actions())
 
         except Exception as e:
             logger.error(f"Ошибка у пользователя {user_id} (@{username}): {e}", exc_info=True)
             safe_send_message(user_id, f"{Messages.INVALID_INPUT}: {e}")
-            # повторное отображение клавиатуры при ошибках
             if session["state"] == "task1":
                 safe_send_message(user_id, Messages.ACTION_PROMPT, reply_markup=get_task1_actions())
             elif session["state"] == "task5":
