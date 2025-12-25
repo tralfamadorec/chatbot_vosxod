@@ -64,7 +64,7 @@ class CustomFormatter(logging.Formatter):
 formatter = CustomFormatter()
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setFormatter(formatter)
-file_handler = logging.File Handler("bot.log", encoding="utf-8")
+file_handler = logging.FileHandler("bot.log", encoding="utf-8")
 file_handler.setFormatter(formatter)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

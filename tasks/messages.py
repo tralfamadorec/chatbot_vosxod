@@ -51,6 +51,12 @@ class Messages:
     UNKNOWN_STATE = "Неизвестное состояние."
     PLEASE_USE_BUTTONS = "Пожалуйста, используйте кнопки."
 
+    # ошибки заданий
+    TASK1_ARRAYS_LEN_MISMATCH = "Массивы должны быть одинаковой длины."
+    TASK5_EMPTY_ARRAY = "Массив не должен быть пустым."
+    TASK8_EMPTY_ARRAY = "Массивы не должны быть пустыми."
+    TASK8_NEGATIVE_NUMBER = "Отрицательные числа не допускаются."
+
     # навигация
     ACTION_PROMPT = "Выберите действие:"
     NEXT_ACTION_PROMPT = "Выберите следующее действие:"
