@@ -1,12 +1,16 @@
-from errors import ArraysLengthMismatchError, EmptyArrayError, NegativeNumberError, InvalidInputError
+from .errors import EmptyArrayError, NegativeNumberError, InvalidInputError
 import random
 
+# чистая логика
+
 def reverse_number(n):
+    # возвращает перевёрнутое число без лидирующих нулей
     if n < 0:
-        raise NegativeNumberError("Число не должно быть отрицательным")
+        raise NegativeNumberError("Отрицательные числа не допускаются")
     return int(str(n)[::-1])
 
 def count_common_with_reverse(arr1, arr2):
+    # считает, сколько элементов из arr1 встречаются в arr2 или в виде перевёрнутых
     if not arr1 or not arr2:
         raise EmptyArrayError("Массивы не должны быть пустыми")
     count = 0
@@ -16,94 +20,100 @@ def count_common_with_reverse(arr1, arr2):
     return count
 
 
+# FSM через словарь состояний (для Telegram)
+
 class Task8FSM:
     def __init__(self):
         self.state = "menu"
         self.context = {"arr1": None, "arr2": None, "result": None}
-        self.handlers = {
-            "menu": self._menu,
-            "input_manual": self._input_manual,
-            "input_random": self._input_random,
-            "execute": self._execute,
-            "show_result": self._show_result,
-        }
 
-    def handle(self, event):
-        handler = self.handlers.get(self.state)
-        if handler:
-            return handler(event)
-        return "Неверное состояние"
+    def handle(self, text):
+        # обрабатывает текстовое сообщение от пользователя
+        if self.state == "menu":
+            return self._handle_menu(text)
+        elif self.state == "input_manual":
+            return self._handle_input_manual(text)
+        elif self.state == "input_random":
+            return self._handle_input_random(text)
+        elif self.state == "execute":
+            return self._handle_execute()
+        elif self.state == "show_result":
+            return self._handle_show_result()
+        else:
+            return "Неизвестное состояние"
 
-    def _menu(self, event):
-        choice = event.get("choice")
-        if choice == "1":
+    def _handle_menu(self, text):
+        if text == "1":
             self.state = "input_manual"
-            return "Введите массивы..."
-        elif choice == "2":
+            return "Введите два массива через ';' (пример: 12 34; 21 56)"
+        elif text == "2":
             self.state = "input_random"
-            return "Введите размер массивов:"
-        elif choice == "3":
+            return "Введите размер массивов (целое число > 0):"
+        elif text == "3":
             self.state = "execute"
-            return self.handle({"choice": "3"})
-        elif choice == "4":
+            return self._handle_execute()
+        elif text == "4":
             self.state = "show_result"
-            return self.handle({"choice": "4"})
-        elif choice == "5":
+            return self._handle_show_result()
+        elif text == "5":
             return "exit"
         else:
-            return "Неверный выбор"
+            return "Неверный выбор. Отправьте 1-5."
 
-    def _input_manual(self, event):
+    def _handle_input_manual(self, text):
         try:
-            arr1 = list(map(int, event["arr1"].split()))
-            arr2 = list(map(int, event["arr2"].split()))
+            parts = text.split(";")
+            if len(parts) != 2:
+                return "Неверный формат. Отправьте: 'массив1; массив2'"
+            arr1 = list(map(int, parts[0].split()))
+            arr2 = list(map(int, parts[1].split()))
             if not arr1 or not arr2:
                 raise EmptyArrayError("Массивы не должны быть пустыми")
             if any(x < 0 for x in arr1 + arr2):
-                raise NegativeNumberError("Числа не должны быть отрицательными")
+                raise NegativeNumberError("Отрицательные числа не допускаются")
             self.context["arr1"] = arr1
             self.context["arr2"] = arr2
             self.context["result"] = None
             self.state = "menu"
-            return "Данные введены"
+            return "Данные сохранены. Выберите:\n1. Ввести\n2. Сгенерировать\n3. Выполнить\n4. Результат\n5. Назад"
         except Exception as e:
             self.state = "menu"
             return f"Ошибка: {e}"
 
-    def _input_random(self, event):
+    def _handle_input_random(self, text):
         try:
-            n = int(event["n"])
+            n = int(text)
             if n <= 0:
-                raise InvalidInputError("Размер должен быть положительным")
-            # Только положительные числа для корректного reverse
+                raise InvalidInputError("Размер должен быть > 0")
+            # Генерируем только положительные числа (для корректного reverse)
             self.context["arr1"] = [random.randint(10, 999) for _ in range(n)]
             self.context["arr2"] = [random.randint(10, 999) for _ in range(n)]
             self.context["result"] = None
             self.state = "menu"
-            return f"Сгенерировано: {self.context['arr1']}, {self.context['arr2']}"
+            return f"Сгенерировано.\nМассив 1: {self.context['arr1']}\nМассив 2: {self.context['arr2']}\nВыберите действие (1-5):"
         except Exception as e:
             self.state = "menu"
             return f"Ошибка: {e}"
 
-    def _execute(self, event):
+    def _handle_execute(self):
         if self.context["arr1"] is None or self.context["arr2"] is None:
             self.state = "menu"
             return "Сначала введите данные!"
         try:
             self.context["result"] = count_common_with_reverse(self.context["arr1"], self.context["arr2"])
             self.state = "menu"
-            return "Алгоритм выполнен"
+            return "Алгоритм выполнен. Результат сохранён."
         except Exception as e:
             self.state = "menu"
             return f"Ошибка: {e}"
 
-    def _show_result(self, event):
+    def _handle_show_result(self):
         if self.context["result"] is None:
             self.state = "menu"
             return "Сначала выполните алгоритм!"
         result = self.context["result"]
         self.state = "menu"
-        return f"Количество общих элементов: {result}"
+        return f"Количество общих элементов (с учётом перевёрнутых): {result}"
 
 
 if __name__ == "__main__":
@@ -111,7 +121,7 @@ if __name__ == "__main__":
     try:
         res = count_common_with_reverse([12, 34, 56], [21, 78, 65])
         print("Успешно:", res)
-        assert res == 2
+        assert res == 2  # 12 <-> 21, 56 <-> 65
     except Exception as e:
         print("Ошибка:", e)
 

@@ -1,5 +1,7 @@
-from errors import ArraysLengthMismatchError, EmptyArrayError, NegativeNumberError, InvalidInputError
+from .errors import ArraysLengthMismatchError, InvalidInputError
 import random
+
+# чистая логика
 
 def sort_desc(arr):
     return sorted(arr, reverse=True)
@@ -19,85 +21,91 @@ def solve(arr1, arr2):
     return sort_asc(summed)
 
 
+# FSM через словарь состояний (адаптирован под Telegram)
+
 class Task1FSM:
     def __init__(self):
         self.state = "menu"
         self.context = {"arr1": None, "arr2": None, "result": None}
-        self.handlers = {
-            "menu": self._menu,
-            "input_manual": self._input_manual,
-            "input_random": self._input_random,
-            "execute": self._execute,
-            "show_result": self._show_result,
-        }
 
-    def handle(self, event):
-        handler = self.handlers.get(self.state)
-        if handler:
-            return handler(event)
-        return "Неверное состояние"
+    def handle(self, text):
+        # обрабатывает текстовое сообщение от пользователя
+        if self.state == "menu":
+            return self._handle_menu(text)
+        elif self.state == "input_manual":
+            return self._handle_input_manual(text)
+        elif self.state == "input_random":
+            return self._handle_input_random(text)
+        elif self.state == "execute":
+            return self._handle_execute()
+        elif self.state == "show_result":
+            return self._handle_show_result()
+        else:
+            return "Неизвестное состояние"
 
-    def _menu(self, event):
-        choice = event.get("choice")
-        if choice == "1":
+    def _handle_menu(self, text):
+        if text == "1":
             self.state = "input_manual"
-            return "Введите массивы..."
-        elif choice == "2":
+            return "Введите два массива через ';' (пример: 1 2 3; 4 5 6)"
+        elif text == "2":
             self.state = "input_random"
-            return "Введите размер массивов:"
-        elif choice == "3":
+            return "Введите размер массивов (целое число > 0):"
+        elif text == "3":
             self.state = "execute"
-            return self.handle({"choice": "3"})  # перезапуск в новом состоянии
-        elif choice == "4":
+            return self._handle_execute()
+        elif text == "4":
             self.state = "show_result"
-            return self.handle({"choice": "4"})
-        elif choice == "5":
+            return self._handle_show_result()
+        elif text == "5":
             return "exit"
         else:
-            return "Неверный выбор"
+            return "Неверный выбор. Отправьте 1–5."
 
-    def _input_manual(self, event):
+    def _handle_input_manual(self, text):
         try:
-            arr1 = list(map(int, event["arr1"].split()))
-            arr2 = list(map(int, event["arr2"].split()))
+            parts = text.split(";")
+            if len(parts) != 2:
+                return "Неверный формат. Отправьте: 'массив1; массив2'"
+            arr1 = list(map(int, parts[0].split()))
+            arr2 = list(map(int, parts[1].split()))
             if len(arr1) != len(arr2):
-                raise ArraysLengthMismatchError("Массивы должны быть одинаковой длины")
+                raise ArraysLengthMismatchError("Массивы разной длины")
             self.context["arr1"] = arr1
             self.context["arr2"] = arr2
             self.context["result"] = None
             self.state = "menu"
-            return "Данные введены"
+            return "Данные сохранены. Выберите:\n1–Ввести\n2–Сгенерировать\n3–Выполнить\n4–Результат\n5–Назад"
         except Exception as e:
             self.state = "menu"
             return f"Ошибка: {e}"
 
-    def _input_random(self, event):
+    def _handle_input_random(self, text):
         try:
-            n = int(event["n"])
+            n = int(text)
             if n <= 0:
-                raise InvalidInputError("Размер массивов должен быть положительным")
+                raise InvalidInputError("Размер должен быть > 0")
             self.context["arr1"] = [random.randint(1, 20) for _ in range(n)]
             self.context["arr2"] = [random.randint(1, 20) for _ in range(n)]
             self.context["result"] = None
             self.state = "menu"
-            return f"Сгенерировано: {self.context['arr1']}, {self.context['arr2']}"
+            return f"Сгенерировано.\nМассив 1: {self.context['arr1']}\nМассив 2: {self.context['arr2']}\nВыберите действие (1–5):"
         except Exception as e:
             self.state = "menu"
             return f"Ошибка: {e}"
 
-    def _execute(self, event):
+    def _handle_execute(self):
         if self.context["arr1"] is None or self.context["arr2"] is None:
             self.state = "menu"
             return "Сначала введите данные!"
         try:
             self.context["result"] = solve(self.context["arr1"], self.context["arr2"])
             self.state = "menu"
-            return "Алгоритм выполнен"
+            return "Алгоритм выполнен. Результат сохранён."
         except Exception as e:
             self.state = "menu"
             return f"Ошибка: {e}"
 
-    def _show_result(self, event):
+    def _handle_show_result(self):
         if self.context["result"] is None:
             self.state = "menu"
             return "Сначала выполните алгоритм!"
@@ -107,7 +115,7 @@ class Task1FSM:
 
 
 if __name__ == "__main__":
-    print("Тест task1:")
+    print("Тест task1: solve")
     try:
         res = solve([5, 7, 4], [4, 9, 3])
         print("Успешно:", res)
