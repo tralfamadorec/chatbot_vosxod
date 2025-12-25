@@ -1,3 +1,8 @@
+"""Модуль для выполнения задания 5: подмассивы с заданной суммой
+
+Реализует алгоритм подсчёта количества непрерывных подмассивов, сумма элементов которых равна заданному числу
+"""
+
 from .errors import EmptyArrayError, InvalidInputError
 from .messages import Messages
 import random
@@ -5,7 +10,18 @@ import random
 # чистая логика
 
 def count_subarrays_with_sum(arr, target):
-    # считает количество подмассивов с заданной суммой
+    """Считает количество непрерывных подмассивов с заданной суммой
+
+    Args:
+        arr (list[int]): Исходный массив целых чисел
+        target (int): Целевая сумма
+
+    Returns:
+        int: Количество подмассивов, сумма которых равна target
+
+    Raises:
+        EmptyArrayError: Если входной массив пуст
+    """
     if not arr:
         raise EmptyArrayError(Messages.TASK5_EMPTY_ARRAY)
     count = 0
@@ -22,12 +38,34 @@ def count_subarrays_with_sum(arr, target):
 # FSM через словарь состояний (адаптирован под Telegram)
 
 class Task5FSM:
+    """Конечный автомат для задания 5
+
+    Управляет состояниями пользователя в Telegram-боте:
+    - главное меню
+    - ввод массива и цели вручную
+    - генерация случайных данных
+    - выполнение алгоритма
+    - показ результата
+
+    Attributes:
+        state (str): Текущее состояние FSM (например, "menu", "input_manual")
+        context (dict): Хранит данные пользователя (массив, цель, результат)
+    """
+
     def __init__(self):
+        # инициализирует FSM в состоянии "menu"
         self.state = "menu"
         self.context = {"arr": None, "target": None, "result": None}
 
     def handle(self, text):
-        # обрабатывает текстовое сообщение от пользователя
+        """Обрабатывает текстовое сообщение от пользователя
+
+        Args:
+            text (str): Текст сообщения (обычно текст кнопки или ввод данных)
+
+        Returns:
+            str: Ответное сообщение для отправки пользователю
+        """
         if self.state == "menu":
             return self._handle_menu(text)
         elif self.state == "input_manual":
@@ -42,6 +80,14 @@ class Task5FSM:
             return Messages.UNKNOWN_STATE
 
     def _handle_menu(self, text):
+        """Обрабатывает выбор действия в главном меню задания 5
+
+        Args:
+            text (str): Текст кнопки ("Ввести вручную", "Сгенерировать" и т.д.)
+
+        Returns:
+            str: Ответное сообщение
+        """
         if text == "Ввести вручную":
             self.state = "input_manual"
             return Messages.INPUT_MANUAL_TASK5
@@ -60,6 +106,14 @@ class Task5FSM:
             return Messages.PLEASE_USE_BUTTONS
 
     def _handle_input_manual(self, text):
+        """Обрабатывает ручной ввод массива и цели
+
+        Args:
+            text (str): Массив и цель, разделённые ';'
+
+        Returns:
+            str: Результат обработки или сообщение об ошибке
+        """
         try:
             parts = text.split(";")
             if len(parts) != 2:
@@ -78,6 +132,14 @@ class Task5FSM:
             return f"{Messages.INVALID_INPUT}: {e}"
 
     def _handle_input_random(self, text):
+        """Обрабатывает ввод размера для генерации случайных данных
+
+        Args:
+            text (str): Размер массива (целое число)
+
+        Returns:
+            str: Результат генерации или сообщение об ошибке
+        """
         try:
             n = int(text)
             if n <= 0:
@@ -92,6 +154,11 @@ class Task5FSM:
             return f"{Messages.INVALID_INPUT}: {e}"
 
     def _handle_execute(self):
+        """Выполняет алгоритм задания 5
+
+        Returns:
+            str: Результат выполнения или сообщение об ошибке
+        """
         if self.context["arr"] is None or self.context["target"] is None:
             self.state = "menu"
             return Messages.NO_DATA
@@ -104,6 +171,11 @@ class Task5FSM:
             return f"{Messages.INVALID_INPUT}: {e}"
 
     def _handle_show_result(self):
+        """Возвращает результат выполнения алгоритма
+
+        Returns:
+            str: Результат или сообщение об ошибке
+        """
         if self.context["result"] is None:
             self.state = "menu"
             return Messages.NOT_EXECUTED
