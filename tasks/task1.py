@@ -44,22 +44,22 @@ class Task1FSM:
             return "Неизвестное состояние"
 
     def _handle_menu(self, text):
-        if text == "1":
+        if text == "Ввести вручную":
             self.state = "input_manual"
-            return "Введите два массива через ';' (пример: 1 2 3; 4 5 6)"
-        elif text == "2":
+            return "Введите два массива через ';' (например: 1 2 3; 4 5 6)"
+        elif text == "Сгенерировать":
             self.state = "input_random"
             return "Введите размер массивов (целое число > 0):"
-        elif text == "3":
+        elif text == "Выполнить":
             self.state = "execute"
             return self._handle_execute()
-        elif text == "4":
+        elif text == "Результат":
             self.state = "show_result"
             return self._handle_show_result()
-        elif text == "5":
+        elif text == "Назад":
             return "exit"
         else:
-            return "Неверный выбор. Отправьте 1–5."
+            return "Пожалуйста, используйте кнопки."
 
     def _handle_input_manual(self, text):
         try:
@@ -74,7 +74,7 @@ class Task1FSM:
             self.context["arr2"] = arr2
             self.context["result"] = None
             self.state = "menu"
-            return "Данные сохранены. Выберите:\n1–Ввести\n2–Сгенерировать\n3–Выполнить\n4–Результат\n5–Назад"
+            return "Данные сохранены."
         except Exception as e:
             self.state = "menu"
             return f"Ошибка: {e}"
@@ -88,7 +88,7 @@ class Task1FSM:
             self.context["arr2"] = [random.randint(1, 20) for _ in range(n)]
             self.context["result"] = None
             self.state = "menu"
-            return f"Сгенерировано.\nМассив 1: {self.context['arr1']}\nМассив 2: {self.context['arr2']}\nВыберите действие (1–5):"
+            return f"Сгенерировано.\nМассив 1: {self.context['arr1']}\nМассив 2: {self.context['arr2']}"
         except Exception as e:
             self.state = "menu"
             return f"Ошибка: {e}"

@@ -18,7 +18,7 @@ def count_subarrays_with_sum(arr, target):
     return count
 
 
-# FSM через словарь состояний (для Telegram)
+# FSM через словарь состояний (адаптирован под Telegram)
 
 class Task5FSM:
     def __init__(self):
@@ -41,22 +41,22 @@ class Task5FSM:
             return "Неизвестное состояние"
 
     def _handle_menu(self, text):
-        if text == "1":
+        if text == "Ввести вручную":
             self.state = "input_manual"
-            return "Введите массив и цель через ';' (пример: 1 2 3; 5)"
-        elif text == "2":
+            return "Введите массив и цель через ';' (например: 1 2 3; 5)"
+        elif text == "Сгенерировать":
             self.state = "input_random"
             return "Введите размер массива (целое число > 0):"
-        elif text == "3":
+        elif text == "Выполнить":
             self.state = "execute"
             return self._handle_execute()
-        elif text == "4":
+        elif text == "Результат":
             self.state = "show_result"
             return self._handle_show_result()
-        elif text == "5":
+        elif text == "Назад":
             return "exit"
         else:
-            return "Неверный выбор. Отправьте 1-5."
+            return "Пожалуйста, используйте кнопки."
 
     def _handle_input_manual(self, text):
         try:
@@ -71,7 +71,7 @@ class Task5FSM:
             self.context["target"] = target
             self.context["result"] = None
             self.state = "menu"
-            return "Данные сохранены. Выберите:\n1. Ввести\n2. Сгенерировать\n3. Выполнить\n4. Результат\n5. Назад"
+            return "Данные сохранены."
         except Exception as e:
             self.state = "menu"
             return f"Ошибка: {e}"
@@ -85,7 +85,7 @@ class Task5FSM:
             self.context["target"] = random.randint(-5, 10)
             self.context["result"] = None
             self.state = "menu"
-            return f"Сгенерировано.\nМассив: {self.context['arr']}\nЦель: {self.context['target']}\nВыберите действие (1-5):"
+            return f"Сгенерировано.\nМассив: {self.context['arr']}\nЦель: {self.context['target']}"
         except Exception as e:
             self.state = "menu"
             return f"Ошибка: {e}"
